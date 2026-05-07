@@ -114,14 +114,33 @@ export function Toolbar() {
     }
   };
 
+  /**
+   * 返回首页：清除路由记忆标记后整页跳转
+   */
+  const handleBrandClick = () => {
+    try {
+      localStorage.removeItem('opresume:last-route');
+    } catch {
+      /* localStorage 不可用时忽略，跳转仍能完成 */
+    }
+    window.location.href = '/';
+  };
+
   return (
     <>
       <header className="sticky top-0 z-50 flex h-12 items-center justify-between border-b bg-white px-3.5 print:hidden">
         <div className="flex items-center gap-1 select-none">
-          <BrandLogo className="h-5 w-5 text-[#1A1A1A]" />
-          <span className="brand-font text-lg font-bold text-[#1A1A1A] tracking-tight">
-            {t('app.fullName')}
-          </span>
+          <button
+            type="button"
+            onClick={handleBrandClick}
+            aria-label={t('toolbar.backToHome', '返回首页')}
+            className="flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1A1A1A]/30 rounded-md"
+          >
+            <BrandLogo className="h-5 w-5 text-[#1A1A1A]" />
+            <span className="brand-font text-lg font-bold text-[#1A1A1A] tracking-tight">
+              {t('app.fullName')}
+            </span>
+          </button>
           <Badge variant="secondary" className="ml-1.5 translate-y-px px-1.5 py-0 text-[10px] leading-4 font-medium text-muted-foreground">
             v{__APP_VERSION__}
           </Badge>

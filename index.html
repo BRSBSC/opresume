@@ -1,17 +1,1109 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Favicon：现代浏览器优先使用 SVG（矢量、透明、自动适配明暗主题），
-        不支持 SVG 的旧浏览器与外部抓取工具（Slack/RSS 等）回退到 ICO。 -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <meta name="theme-color" content="#1A1A1A" />
-    <title>优派简历</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    // 路由记忆：上次会话停留在 /editor 时，直接重定向跳过 landing。
+    // 必须放在 head 最早处，避免 landing 资源（字体/CSS/图）开始加载导致闪烁。
+    // 使用 location.replace 让 / 不进入历史栈，浏览器返回键仍能回到上一站点。
+    try {
+      if (localStorage.getItem('opresume:last-route') === '/editor') {
+        location.replace('/editor');
+      }
+    } catch (_) { /* localStorage 不可用时忽略，正常显示 landing */ }
+  </script>
+  <title>优派简历</title>
+  <meta name="description" content="优派简历 OpResume — 免登录的智能简历生成器。保护隐私，体验不打折扣。" />
+
+  <!-- Open Graph / 社交分享卡片 -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="优派简历 — 写简历，本应如此。" />
+  <meta property="og:description" content="免登录的智能简历生成器。AI 润色、拖拽排版、隐私打码 — 您的简历，永远只在您手里。" />
+  <meta property="og:url" content="https://opresume.pages.dev" />
+  <meta property="og:image" content="/favicon.svg" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:site_name" content="优派简历" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="优派简历 — 写简历，本应如此。" />
+  <meta name="twitter:description" content="免登录的智能简历生成器。AI 润色、拖拽排版、隐私打码。" />
+  <meta name="twitter:image" content="/favicon.svg" />
+
+  <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+
+  <!-- SEO 关键词与作者标签 -->
+  <meta name="keywords" content="简历生成器,在线简历,免登录简历,本地简历,React 简历,AI 简历,隐私简历,PDF 简历,resume builder,opresume,优派简历" />
+  <meta name="author" content="OpResume" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://opresume.pages.dev" />
+
+  <!-- 结构化数据：让搜索引擎理解这是一个免费的简历生成 Web 应用 -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "优派简历 OpResume",
+    "alternateName": ["优派简历", "OpResume"],
+    "url": "https://opresume.pages.dev",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "ResumeBuilder",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript. Requires HTML5.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "CNY",
+      "availability": "https://schema.org/InStock"
+    },
+    "description": "免登录的智能简历生成器。AI 润色、拖拽排版、隐私打码 — 您的简历，永远只在您手里。",
+    "featureList": [
+      "AI 划词润色与 Diff 对比",
+      "积木式拖拽排版",
+      "一键隐私打码模式",
+      "PDF 上传智能解析",
+      "智能推算年龄与工作年限",
+      "ATS 友好原生 PDF 导出"
+    ],
+    "inLanguage": ["zh-CN", "en"],
+    "softwareVersion": "1.3.0",
+    "license": "https://opensource.org/licenses/MIT",
+    "author": {
+      "@type": "Organization",
+      "name": "OpResume",
+      "url": "https://github.com/oopooa/opresume"
+    }
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Manrope 可变字体单文件覆盖 300-800 全字重，比 6 个静态字重少约 50% 体积 -->
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       品牌字体：MiSans Bold（小米开源 OFL 协议，可商用）
+       已做子集化，仅含品牌名"优派简历"所需字符，体积约 2.5KB。
+       通过 .brand-font 类按需应用，与 React 编辑器（src/index.css）保持一致。
+       ============================================================ */
+    @font-face {
+      font-family: 'MiSans';
+      src: url('/fonts/MiSans-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    .brand-font {
+      font-family: 'MiSans', system-ui, -apple-system, BlinkMacSystemFont,
+        'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+  </style>
+
+  <style>
+    /* ============================================================
+       基础重置 & 全局变量
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* 隐藏浏览器原生滚动条：顶部已有 2px 进度条作为视觉指示，避免重复
+       Chrome/Safari/Edge 走 ::-webkit-scrollbar
+       Firefox 走 scrollbar-width: none
+       老 IE/Edge 走 -ms-overflow-style: none
+       overflow 滚动行为本身不受影响 */
+    html, body {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
+    }
+
+    :root {
+      --color-bg-light: #F9FAFB;
+      --color-bg-dark: #000000;
+      --color-bg-card: #FFFFFF;
+      --color-text-main: #1D1D1F;
+      --color-text-muted: #86868B;
+      --color-text-dark-main: #F5F5F7;
+      --color-text-dark-muted: #A1A1A6;
+
+      --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+
+    body {
+      background-color: var(--color-bg-light);
+      color: var(--color-text-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    ::selection { background: var(--color-text-main); color: var(--color-bg-light); }
+    .dark-section ::selection { background: var(--color-bg-light); color: var(--color-bg-dark); }
+
+    a { text-decoration: none; color: inherit; }
+
+    /* ============================================================
+       滚动揭示动画 (Scroll Reveal)
+       ============================================================ */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 1.2s var(--ease-apple), transform 1.2s var(--ease-apple);
+      will-change: opacity, transform;
+    }
+    .reveal.is-visible { opacity: 1; transform: translateY(0); }
+    .reveal.delay-1 { transition-delay: 0.1s; }
+    .reveal.delay-2 { transition-delay: 0.2s; }
+    .reveal.delay-3 { transition-delay: 0.3s; }
+
+    /* ============================================================
+       页面布局与组件
+       ============================================================ */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* 导航栏：与 /editor 的 Toolbar 严格对齐 — 高度 48px、内边距 14px、logo 20×20、字号 18 / 700 / brand-font */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; height: 48px;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 14px;
+      /* 毛玻璃通透度：alpha 0.6（半透明，避免吃掉细文字对比度）+ blur 10px（轻磨砂，保留可识别痕迹） */
+      background: rgba(245, 245, 247, 0.6); backdrop-filter: saturate(180%) blur(10px);
+      -webkit-backdrop-filter: saturate(180%) blur(10px); z-index: 100; transition: all 0.5s var(--ease-apple);
+    }
+    .nav.is-dark { background: rgba(0, 0, 0, 0.6); color: var(--color-bg-light); }
+    .nav-brand {
+      font-family: 'MiSans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-weight: 700; font-size: 18px; letter-spacing: -0.025em;
+      color: #1A1A1A;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .nav.is-dark .nav-brand { color: var(--color-text-dark-main); }
+
+    /* 滚动进度条：贴 nav 底部，宽度跟随 scroll 百分比，颜色随 nav 浅/深色切换 */
+    .scroll-progress {
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      height: 2px;
+      background: var(--color-text-main);
+      width: 0;
+      transform-origin: left center;
+      transition: background 0.5s var(--ease-apple);
+      will-change: width;
+    }
+    .nav.is-dark .scroll-progress { background: var(--color-bg-light); }
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+
+    /* GitHub Star 按钮：黄色 outline 五角星 + Star on GitHub + 竖线分隔 + 千位逗号数字。
+       hover 时星星旋转 72° 并填充为实心黄色，呼应"点亮 star"的语义。
+       1 小时 localStorage 缓存避开未授权 API 60 次/小时/IP 限制。 */
+    .github-star-btn {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      font-size: 14px; font-weight: 600; line-height: 1;
+      color: var(--color-text-main);
+      transition: filter 0.25s var(--ease-apple), border-color 0.25s var(--ease-apple);
+    }
+    /* 极光层：撑大到父容器 200%，对 transform 做合成层动画（避开 background-position 触发 Paint） */
+    .github-star-btn::before {
+      content: '';
+      position: absolute;
+      inset: -50%;
+      z-index: -1;
+      background: linear-gradient(135deg,
+        #FFF1E8 0%, #EAF1FF 25%, #F1E8FF 50%, #EAF1FF 75%, #FFF1E8 100%);
+      animation: aurora-drift 18s ease-in-out infinite;
+      will-change: transform;
+    }
+    /* hover 仅用 filter 提亮饱和，不改 background — 保持平面感 */
+    .github-star-btn:hover {
+      filter: brightness(1.04) saturate(1.2);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+    .github-star-btn__icon {
+      width: 16px; height: 16px; flex-shrink: 0;
+      stroke: #F5B400;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: transparent;
+      transition: fill 0.3s var(--ease-apple), transform 0.4s var(--ease-apple);
+    }
+    .github-star-btn:hover .github-star-btn__icon {
+      fill: #F5B400;
+      transform: rotate(144deg);
+    }
+    .github-star-btn__divider {
+      width: 1px; height: 14px;
+      background: rgba(0, 0, 0, 0.14);
+      flex-shrink: 0;
+    }
+    .github-star-btn__count {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.01em;
+    }
+    .nav.is-dark .github-star-btn {
+      border-color: rgba(255, 255, 255, 0.14);
+      color: var(--color-bg-light);
+    }
+    .nav.is-dark .github-star-btn::before {
+      background: linear-gradient(135deg,
+        rgba(255, 180, 140, 0.18) 0%,
+        rgba(140, 180, 255, 0.18) 25%,
+        rgba(200, 140, 255, 0.18) 50%,
+        rgba(140, 180, 255, 0.18) 75%,
+        rgba(255, 180, 140, 0.18) 100%);
+    }
+    .nav.is-dark .github-star-btn:hover {
+      filter: brightness(1.18) saturate(1.25);
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+    .nav.is-dark .github-star-btn__divider { background: rgba(255, 255, 255, 0.22); }
+
+    .nav-btn {
+      font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 99px; cursor: pointer;
+      background: var(--color-text-main); color: var(--color-bg-light); transition: transform 0.3s var(--ease-apple); border: none;
+    }
+    .nav.is-dark .nav-btn { background: var(--color-bg-light); color: var(--color-text-main); }
+    .nav-btn:hover { transform: scale(0.96); }
+
+    /* 通用按钮 */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 16px 32px; border-radius: 99px; font-size: 18px; font-weight: 600;
+      transition: all 0.4s var(--ease-apple); cursor: pointer; border: none; outline: none;
+    }
+    .btn-primary { background: var(--color-text-main); color: var(--color-bg-light); }
+    .btn-primary:hover { background: #000; transform: scale(1.02); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-outline { border: 1px solid #D2D2D7; color: var(--color-text-main); background: transparent; }
+    .btn-outline:hover { border-color: var(--color-text-main); }
+
+    /* CTA 按钮内右向箭头：hover 时随父按钮一起向右移动，叠加父级 scale 不冲突 */
+    .btn-arrow {
+      width: 18px; height: 18px; margin-left: 10px;
+      transition: transform 0.4s var(--ease-apple);
+    }
+    .btn:hover .btn-arrow { transform: translateX(4px); }
+
+    /* 章节通用样式 */
+    .section-spacing { padding: 160px 0; position: relative; }
+    .dark-section { background: var(--color-bg-dark); color: var(--color-text-dark-main); }
+    /* section-card：白底卡片，与默认 #F5F5F7 形成微妙层次。
+       视觉节奏：F5（默认）→ 白卡 → F5 → 白卡 ... 比纯单色更耐看，又不喧宾夺主 */
+    .section-card { background: var(--color-bg-card); }
+
+    /* 巨型标题排版 */
+    .kicker { font-size: 14px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 24px; }
+    .hero-title { font-size: clamp(40px, 5.5vw, 72px); font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; margin-bottom: 32px; }
+    .hero-title span { font-weight: 300; color: var(--color-text-muted); }
+    .subtitle { font-size: clamp(20px, 2.5vw, 26px); font-weight: 500; color: var(--color-text-muted); max-width: 700px; line-height: 1.5; }
+
+    /* Hero */
+    .section-hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; text-align: center; align-items: center; padding-top: 80px; }
+    .hero-cta-group { margin-top: 56px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+    /* Manifesto */
+    .manifesto-title { font-size: clamp(40px, 6vw, 80px); font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; }
+    .manifesto-title i { font-style: italic; font-weight: 300; color: var(--color-text-dark-muted); }
+    .manifesto-desc { margin-top: 48px; max-width: 600px; color: var(--color-text-dark-muted); }
+
+    .manifesto-layout {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 64px;
+    }
+    .manifesto-text { flex: 1 1 auto; min-width: 0; }
+    .manifesto-shield {
+      flex: 0 0 auto;
+      position: relative;
+      width: 360px;
+      height: 360px;
+      display: grid;
+      place-items: center;
+    }
+    /* 3 圈错相位（0 / 1.4 / 2.8s）形成连绵雷达扩散；
+       起始 0.45× 略小于盾图，能看到光环从盾内"涌出"。 */
+    .manifesto-shield-pulse {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.32);
+      opacity: 0;
+      animation: shield-pulse 4.2s ease-out infinite;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+    .manifesto-shield-pulse:nth-child(2) { animation-delay: 1.4s; }
+    .manifesto-shield-pulse:nth-child(3) { animation-delay: 2.8s; }
+    .manifesto-shield-icon {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      stroke: var(--color-text-dark-main);
+      stroke-width: 1.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      animation: shield-breathe 3.6s ease-in-out infinite;
+      will-change: transform;
+    }
+    .manifesto-shield-check {
+      stroke: #51CF66;
+      stroke-width: 1.8;
+    }
+
+    @keyframes shield-pulse {
+      0%   { transform: scale(0.45); opacity: 0; }
+      20%  { opacity: 0.55; }
+      100% { transform: scale(1.6);  opacity: 0; }
+    }
+    @keyframes shield-breathe {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.05); }
+    }
+
+    @media (max-width: 900px) {
+      .manifesto-layout { flex-direction: column-reverse; align-items: flex-start; gap: 48px; }
+      .manifesto-shield { width: 280px; height: 280px; }
+      .manifesto-shield-icon { width: 112px; height: 112px; }
+    }
+
+    /* 交错特性排版 */
+    .features-header { text-align: center; margin-bottom: 120px; }
+    .feature-row {
+      /* flex 而非 grid 等分：让 .feature-visual 由 mockup-box 的 width 决定，
+         这样每个卡片可以通过 --mockup-w 独立调整宽度而不被父容器限制。 */
+      display: flex; align-items: center; gap: 80px;
+    }
+    .feature-row.reverse { flex-direction: row-reverse; }
+    .feature-text { flex: 1 1 0; min-width: 0; }     /* 弹性占满剩余空间 */
+    .feature-visual { flex: 0 0 auto; }              /* 不参与弹性，宽度由内部 mockup-box 决定 */
+
+    /* 移动端自适应 */
+    @media (max-width: 900px) {
+      .section-spacing { padding: 80px 0; }
+      .feature-row,
+      .feature-row.reverse { flex-direction: column; gap: 48px; }
+      .feature-visual { width: 100%; }
+    }
+
+    .feature-text h3 { font-size: clamp(36px, 5vw, 56px); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 24px; }
+    .feature-text h3 span { font-weight: 300; color: var(--color-text-muted); }
+    .feature-text p { font-size: 18px; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 32px; }
+    .feature-list { list-style: none; border-top: 1px solid #E8E8ED; padding-top: 24px; }
+    .feature-list li { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+    .feature-list li::before { content: ''; display: block; width: 6px; height: 6px; background: var(--color-text-main); border-radius: 50%; }
+
+    .dark-section .feature-text h3 { color: var(--color-text-dark-main); }
+    .dark-section .feature-text h3 span { color: var(--color-text-dark-muted); }
+    .dark-section .feature-text p { color: var(--color-text-dark-muted); }
+    .dark-section .feature-list { border-top-color: #333336; }
+    .dark-section .feature-list li { color: var(--color-text-dark-main); }
+    .dark-section .feature-list li::before { background: var(--color-text-dark-main); }
+
+    /* 骨架光影占位框 */
+    .mockup-box {
+      /* 每个卡片通过 .mockup-box-{ai,drag,privacy} 单独设置：
+         --mockup-w 卡片宽度（直接生效，父容器 .feature-visual 自动跟随）
+         --mockup-h 卡片高度
+         max-width: 100% 防止极端值溢出父容器；移动端见下方媒体查询。 */
+      width: var(--mockup-w, 560px);
+      max-width: 100%;
+      height: var(--mockup-h, 360px);
+      border-radius: 24px; overflow: hidden;
+      border: 1px solid #E8E8ED; display: flex; align-items: center; justify-content: center;
+      transition: transform 0.5s var(--ease-apple);
+      /* 高级银灰渐变光影 */
+      background: linear-gradient(120deg, #F5F5F7 25%, #FFFFFF 50%, #F5F5F7 75%);
+      background-size: 200% 100%;
+      animation: shimmer 4s infinite linear;
+    }
+    .mockup-box:hover { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(0,0,0,0.1); }
+    /* 移动端：解除固定宽高，按 16:10 比例自适应屏幕宽度 */
+    @media (max-width: 768px) {
+      .mockup-box { width: 100%; height: auto; aspect-ratio: 16 / 10; }
+    }
+    .mockup-content { text-align: center; color: var(--color-text-muted); font-weight: 600; font-size: 14px; letter-spacing: 0.1em; }
+
+    .dark-section .mockup-box {
+      border-color: #424245;
+      /* 深色渐变光影 */
+      background: linear-gradient(120deg, #1D1D1F 25%, #2D2D30 50%, #1D1D1F 75%);
+      background-size: 200% 100%;
+    }
+    .dark-section .mockup-box:hover { box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+    .dark-section .mockup-content { color: var(--color-text-dark-muted); }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* 椭圆轨迹（左→上→右→下→左），区别于 shimmer 的单向平移 */
+    @keyframes aurora-drift {
+      0%   { transform: translate3d(-12%, -6%, 0); }
+      25%  { transform: translate3d(  6%,-12%, 0); }
+      50%  { transform: translate3d( 12%,  6%, 0); }
+      75%  { transform: translate3d( -6%, 12%, 0); }
+      100% { transform: translate3d(-12%, -6%, 0); }
+    }
+
+    /* 减少动效偏好（无障碍） */
+    @media (prefers-reduced-motion: reduce) {
+      .github-star-btn::before { animation: none; }
+      .mockup-box { animation: none; }
+      .manifesto-shield-pulse { animation: none; opacity: 0; }
+      .manifesto-shield-icon { animation: none; }
+    }
+
+    /* Final CTA */
+    .section-final { text-align: center; padding: 160px 0; background: var(--color-bg-card); }
+    .section-final h2 { font-size: clamp(36px, 5.5vw, 64px); font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; margin-bottom: 24px; }
+    .section-final-subtitle {
+      font-size: clamp(16px, 1.8vw, 20px);
+      color: var(--color-text-muted);
+      max-width: 640px;
+      margin: 0 auto 56px;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       Stats — 0 servers · 0 signups · 100% local 数字铺垫
+       浅底版本：文字色用 muted 而非 dark-muted（适配 white card 背景）
+       ============================================================ */
+    .section-stats { padding: 160px 0; }
+    .stats-heading {
+      font-size: clamp(36px, 5vw, 64px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 96px;
+      max-width: 720px;
+    }
+    .stats-heading span { font-weight: 300; color: var(--color-text-muted); }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 64px;
+    }
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: 1fr; gap: 64px; }
+    }
+    .stat-num {
+      font-size: clamp(72px, 11vw, 152px);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.05em;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: baseline;
+    }
+    .stat-num em {
+      font-style: normal;
+      font-weight: 300;
+      color: var(--color-text-muted);
+      margin-left: 6px;
+      font-size: 0.5em;
+    }
+    .stat-label {
+      font-size: 12px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+    .stat-desc {
+      font-size: 14px;
+      color: var(--color-text-muted);
+      line-height: 1.65;
+      max-width: 240px;
+    }
+
+    /* ============================================================
+       FAQ — 折叠手风琴
+       ============================================================ */
+    .section-faq { padding: 160px 0; background: var(--color-bg-card); }
+    .faq-heading {
+      font-size: clamp(36px, 5.5vw, 64px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      margin-bottom: 80px;
+      text-align: center;
+    }
+    .faq-list {
+      max-width: 800px;
+      margin: 0 auto;
+      border-top: 1px solid #E8E8ED;
+    }
+    .faq-item {
+      border-bottom: 1px solid #E8E8ED;
+    }
+    .faq-item summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      font-size: clamp(17px, 1.7vw, 19px);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      transition: color 0.3s var(--ease-apple);
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary:hover { color: var(--color-text-muted); }
+    .faq-item summary::after {
+      content: '';
+      width: 11px;
+      height: 11px;
+      border-right: 1.6px solid var(--color-text-muted);
+      border-bottom: 1.6px solid var(--color-text-muted);
+      transform: rotate(45deg);
+      transition: transform 0.4s var(--ease-apple);
+      flex-shrink: 0;
+      margin-top: -4px;
+    }
+    .faq-item[open] summary::after {
+      transform: rotate(-135deg);
+      margin-top: 4px;
+    }
+    .faq-answer {
+      padding: 0 0 32px 0;
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--color-text-muted);
+      max-width: 640px;
+    }
+    .faq-answer a { color: var(--color-text-main); border-bottom: 1px solid currentColor; }
+
+    /* Footer */
+    footer { padding: 32px 0; border-top: 1px solid #E8E8ED; font-size: 14px; color: var(--color-text-muted); background: var(--color-bg-light); }
+
+    /* ============================================================
+       图标系统 — 统一 stroke line work, 跟随 currentColor
+       ============================================================ */
+    .nav-logo { width: 20px; height: 20px; flex-shrink: 0; }
+
+    /* Feature 顶部大号图标徽章 */
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      border: 1px solid #E8E8ED;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 28px;
+      background: var(--color-bg-card);
+      transition: transform 0.5s var(--ease-apple), border-color 0.5s var(--ease-apple);
+    }
+    .feature-icon svg { width: 26px; height: 26px; stroke: var(--color-text-main); }
+    .feature-row:hover .feature-icon { transform: scale(1.05); border-color: var(--color-text-main); }
+    .dark-section .feature-icon { background: #1D1D1F; border-color: #333336; }
+    .dark-section .feature-icon svg { stroke: var(--color-text-dark-main); }
+    .dark-section .feature-row:hover .feature-icon { border-color: var(--color-text-dark-main); }
+
+    /* Mockup 内的 SVG 插画 — 替代 [ XXX 动图 ] 占位文字 */
+    .mockup-illustration {
+      width: 80%;
+      max-width: 360px;
+      height: auto;
+      stroke: var(--color-text-main);
+      stroke-width: 1.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      opacity: 0.78;
+    }
+    .mockup-illustration .accent-fill { fill: var(--color-text-main); stroke: none; opacity: 0.92; }
+    .mockup-illustration .muted { opacity: 0.35; }
+    .mockup-illustration .danger { stroke: #D63B3B; }
+    .mockup-illustration .success { stroke: #2D8F4E; }
+
+    /* mockup-box 内的真实媒体（GIF/图片/视频）：高度撑满容器，
+       左右轻微裁切以消除上下留白。每个卡片的 --mockup-ratio 略小于 GIF 实际比例，
+       使裁切量控制在 4-10%，看起来像被装裱进画框且没有突兀的留白。 */
+    .mockup-media {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* 每个卡片单独调整 宽度（--mockup-w）和 高度（--mockup-h），单位 px。
+       --mockup-w 是"最大宽度"，比父容器小会居中显示，比父容器大被父容器卡住。
+       建议 .feature-visual 桌面端宽度约 556px，--mockup-w 起始值在 400-560 之间。 */
+    .mockup-box-ai      { --mockup-w: 680px; --mockup-h: 300px; }
+    .mockup-box-drag    { --mockup-w: 440px; --mockup-h: 280px; }
+    .mockup-box-privacy { --mockup-w: 600px; --mockup-h: 440px; }
+    .mockup-box-pdf     { --mockup-w: 480px; --mockup-h: 440px; }   /* GIF 1.09:1 近方形 */
+    .dark-section .mockup-illustration { stroke: var(--color-text-dark-main); }
+    .dark-section .mockup-illustration .accent-fill { fill: var(--color-text-dark-main); }
+    .dark-section .mockup-illustration .danger { stroke: #FF6B6B; }
+    .dark-section .mockup-illustration .success { stroke: #51CF66; }
+
+    /* Footer 改造 */
+    .footer-grid {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+      text-align: center;
+    }
+    .footer-links {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .footer-link {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid #E8E8ED;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.3s var(--ease-apple), transform 0.3s var(--ease-apple);
+    }
+    .footer-link:hover { border-color: var(--color-text-main); transform: translateY(-2px); }
+    .footer-link svg { width: 16px; height: 16px; }
+    .footer-version { opacity: 0.6; font-variant-numeric: tabular-nums; }
+
+  </style>
+</head>
+<body>
+
+  <div id="landing-wrapper">
+    <nav class="nav" id="global-nav">
+      <a href="#" class="nav-brand">
+        <svg class="nav-logo" xmlns="http://www.w3.org/2000/svg" viewBox="425.43 407.90 770.44 770.44" fill="currentColor" aria-hidden="true">
+          <path d="M520.2 408.6c-14.9 4-24.5 14.9-29.1 33.1-9.9 38.6 2.2 97.2 31.3 152 12.2 23.1 22 37.9 41.8 63.4 16.5 21.3 31.9 38 65.4 71.4 32.8 32.7 39.2 40.1 44.3 50.8 7 14.7 9.9 35.2 8.1 57.3-1.7 21.8-7.9 69.7-18 139.9-5.5 38.2-12.7 90.8-14.1 103.6-1.6 13.8-.6 18 6.6 27.4 13.8 18.2 57.9 66.6 62.4 68.5 5.5 2.2 9.9.6 16.4-6.2 20.8-21.7 58.6-65.7 61.3-71.3 1.9-3.9 2.4-6.7 2.4-12.5 0-6.4-6.2-59.9-14-120-6.3-48.8-12.1-96.5-13.4-110-6.8-67.9 7-135.6 41.6-204.5 32.7-65.2 71.4-108.3 118.4-131.8 42.7-21.3 79.7-20.6 102.5 2.2 11.3 11.3 16.9 25.7 16.9 43.2 0 21.5-6.4 40.5-21.2 62.6-22.3 33.3-62.3 61.7-108.2 76.8-28.3 9.3-62 15.5-84.7 15.5-11.3 0-22.5 5.9-28.5 15-7.2 10.8-10.4 29.8-7 41.4 2.1 7.2 7.7 13.5 14.9 16.7 4.9 2.3 6.3 2.4 24.7 2.3 47.4-.2 105.9-15.3 156-40.3 44.2-22.1 76.4-49.5 101-86 15.4-23 26.2-50.8 31.6-81.6 2.7-15.5 2.5-44.7-.4-58.7-5.6-26.9-16-46.6-33.8-63.9-17.9-17.4-38.2-27.3-66.7-32.6-13.2-2.4-48-2.4-63.7.1-16.3 2.5-39.8 8.7-53.7 14.1-44.1 17.2-86.9 50.4-122.3 94.9-24.3 30.6-47 71.1-69.5 124.1-7.7 18.2-9.2 20.4-12.8 18.8-6.8-3.1-33-31.6-46.9-50.9-37.3-52-58.7-118.9-59.2-185.6-.1-21.1-.1-21.1-12.2-27.5-20.4-10.9-51.5-16.2-68.2-11.7" />
+        </svg>
+        <span>优派简历</span>
+      </a>
+      <div class="nav-actions">
+        <a class="github-star-btn"
+           href="https://github.com/oopooa/opresume"
+           target="_blank" rel="noopener"
+           aria-label="Star OpResume on GitHub">
+          <!-- 五角星 outline；hover 时由 CSS 控制 fill 与 rotate -->
+          <svg class="github-star-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          <span>Star on GitHub</span>
+          <span class="github-star-btn__divider" aria-hidden="true"></span>
+          <span class="github-star-btn__count" id="github-star-count">—</span>
+        </a>
+        <button type="button" onclick="startApp(event)" class="nav-btn">开始使用</button>
+      </div>
+      <div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
+    </nav>
+
+    <main>
+      <section class="section-hero container">
+        <div class="kicker reveal">Privacy-first · Resume Builder</div>
+        <h1 class="hero-title reveal delay-1">写简历，本应如此</h1>
+        <p class="subtitle reveal delay-2">
+          <span class="brand-font">优派简历</span> — 免登录的AI智能简历生成器<br />
+          将数据留在本地，让隐私安全与极致体验并存。
+        </p>
+        <div class="hero-cta-group reveal delay-3">
+          <button type="button" onclick="startApp(event)" class="btn btn-primary">
+            <span>立即开始</span>
+            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="section-spacing section-card" style="padding-bottom: 40px;">
+        <div class="container features-header reveal">
+          <h2 class="hero-title" style="font-size: clamp(36px, 5vw, 64px); margin-bottom: 16px;">强大功能，<br /><span>化繁为简。</span></h2>
+          <p class="subtitle mx-auto">告别繁琐排版与隐私焦虑，专注于您的核心履历。</p>
+        </div>
+
+        <div class="container">
+          <div class="feature-row">
+            <div class="feature-text">
+              <div class="feature-icon">
+                <!-- Icon: Sparkles (AI) — lucide.dev/icons/sparkles -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                  <path d="M20 3v4" />
+                  <path d="M22 5h-4" />
+                  <path d="M4 17v2" />
+                  <path d="M5 18H3" />
+                </svg>
+              </div>
+              <h3 class="reveal">让 AI，<br /><span>替您字斟句酌。</span></h3>
+              <p class="reveal delay-1">只需划词选中经历，一键即可进行润色或精简。借助直观的红绿差异对比，AI 的每一处改动都一目了然，让您牢牢掌握修改主导权。</p>
+              <ul class="feature-list reveal delay-2">
+                <li>精准到句的局部润色，拒绝盲目重写</li>
+                <li>自动提炼量化成果，增强专业感</li>
+              </ul>
+            </div>
+            <div class="feature-visual reveal delay-3">
+              <div class="mockup-box mockup-box-ai">
+                <!-- AI 改写演示 GIF：放在 public/gif/ 下，构建时复制到 dist 根，生产路径相同 -->
+                <img
+                  class="mockup-media"
+                  src="/gif/ai-rewrite-diff.gif"
+                  alt="AI 划词润色与 Diff 对比演示"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-spacing">
+        <div class="container">
+          <div class="feature-row reverse">
+            <div class="feature-text">
+              <div class="feature-icon">
+                <!-- Icon: Drag handle -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="6" r="1" />
+                  <circle cx="9" cy="12" r="1" />
+                  <circle cx="9" cy="18" r="1" />
+                  <circle cx="15" cy="6" r="1" />
+                  <circle cx="15" cy="12" r="1" />
+                  <circle cx="15" cy="18" r="1" />
+                </svg>
+              </div>
+              <h3 class="reveal">自由拖拽，<br /><span>随心排版。</span></h3>
+              <p class="reveal delay-1">告别传统简历死板的模板限制。采用积木式所见即所得设计，所有模块皆可自由增减。只需轻轻拖拽，即可实时调整最佳版面顺序。</p>
+            </div>
+            <div class="feature-visual reveal delay-2">
+              <div class="mockup-box mockup-box-drag">
+                <!-- 模块拖拽排序演示 GIF -->
+                <img
+                  class="mockup-media"
+                  src="/gif/list-drag.gif"
+                  alt="模块拖拽排序演示"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-spacing section-card">
+        <div class="container">
+          <div class="feature-row">
+            <div class="feature-text">
+              <div class="feature-icon">
+                <!-- Icon: Eye-off (privacy) -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9.88 4.24A10.07 10.07 0 0 1 12 4c5 0 9.27 3.11 11 7.5a13.16 13.16 0 0 1-1.67 2.68" />
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 1 11.5C2.73 15.89 7 19 12 19c1.61 0 3.16-.31 4.59-.88" />
+                  <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88" />
+                  <line x1="3" y1="3" x2="21" y2="21" />
+                </svg>
+              </div>
+              <h3 class="reveal">一键打码，<br /><span>分享更安心。</span></h3>
+              <p class="reveal delay-1">准备去社区寻求大牛的简历建议？开启隐私模式，系统会自动对姓名、电话、邮箱及公司名称等敏感信息进行智能脱敏。截屏分享，从此毫无负担。</p>
+            </div>
+            <div class="feature-visual reveal delay-2">
+              <div class="mockup-box mockup-box-privacy">
+                <!-- 隐私打码模式演示 GIF -->
+                <img
+                  class="mockup-media"
+                  src="/gif/privacy-mode.gif"
+                  alt="一键隐私打码模式演示"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-spacing">
+        <div class="container">
+          <div class="feature-row reverse">
+            <div class="feature-text">
+              <div class="feature-icon">
+                <!-- Icon: File upload -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 3 H7 a2 2 0 0 0 -2 2 V19 a2 2 0 0 0 2 2 H17 a2 2 0 0 0 2 -2 V8 Z" />
+                  <polyline points="14,3 14,8 19,8" />
+                  <polyline points="9,14 12,11 15,14" />
+                  <line x1="12" y1="11" x2="12" y2="17" />
+                </svg>
+              </div>
+              <h3 class="reveal">旧简历，<br /><span>一键无缝迁移。</span></h3>
+              <p class="reveal delay-1">已有旧版 PDF 简历？直接上传，AI 将精准提取并梳理您的所有经历，无缝填充至全新版面。彻底告别繁琐的手动复制粘贴。</p>
+            </div>
+            <div class="feature-visual reveal delay-2">
+              <div class="mockup-box mockup-box-pdf">
+                <!-- PDF 智能解析演示 GIF -->
+                <img
+                  class="mockup-media"
+                  src="/gif/ai-pdf-import.gif"
+                  alt="PDF 简历智能解析与字段填充演示"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-spacing dark-section" id="manifesto-section">
+        <div class="container manifesto-layout">
+          <div class="manifesto-text">
+            <h2 class="manifesto-title reveal">
+              您的数据<br />
+              只在您手里<br />
+              <i>免登录</i>
+            </h2>
+            <p class="subtitle reveal delay-1 manifesto-desc">
+              所有的简历内容仅保存在您的本地设备中。简历不再是被随意读取的云端档案，而是一份绝对私密的个人资产。
+            </p>
+          </div>
+          <div class="manifesto-shield reveal delay-2" aria-hidden="true">
+            <span class="manifesto-shield-pulse"></span>
+            <span class="manifesto-shield-pulse"></span>
+            <span class="manifesto-shield-pulse"></span>
+            <!-- Icon: Shield-check (lucide.dev/icons/shield-check) — 盾牌 + 勾，表达"已被守护" -->
+            <svg class="manifesto-shield-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+              <path class="manifesto-shield-check" d="m9 12 2 2 4-4" />
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           STATS · 数字铺垫
+           ============================================================ -->
+      <section class="section-spacing section-card section-stats" id="stats-section">
+        <div class="container">
+          <h2 class="stats-heading reveal">极简架构<br /><span>绝对隐私</span></h2>
+          <div class="stats-grid">
+            <div class="stat reveal delay-1">
+              <div class="stat-num"><span data-target="0">0</span></div>
+              <div class="stat-label">DATABASE</div>
+              <p class="stat-desc">无数据库。我们不存储您的任何数据。</p>
+            </div>
+            <div class="stat reveal delay-2">
+              <div class="stat-num"><span data-target="0">0</span></div>
+              <div class="stat-label">SIGNUPS</div>
+              <p class="stat-desc">无需邮箱、密码或第三方登录。打开页面即可使用。</p>
+            </div>
+            <div class="stat reveal delay-3">
+              <div class="stat-num"><span data-target="100">0</span><em>%</em></div>
+              <div class="stat-label">LOCAL</div>
+              <p class="stat-desc">核心数据始终储存在您的浏览器中，真正的纯客户端架构。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           FAQ · 折叠手风琴
+           ============================================================ -->
+      <section class="section-faq" id="faq-section">
+        <div class="container">
+          <h2 class="faq-heading reveal">常见问题</h2>
+          <div class="faq-list">
+            <details class="faq-item reveal">
+              <summary>免费使用吗？</summary>
+              <div class="faq-answer">完全免费。项目无广告打扰，无任何功能限制。</div>
+            </details>
+            <details class="faq-item reveal">
+              <summary>既然完全免费，那 AI 功能是如何计费的？</summary>
+              <div class="faq-answer">AI 功能采用 BYOK（自带密钥） 模式。您只需填入平台支持的 AI 供应商的 API Key 即可调用，平台不从中收取任何费用。</div>
+            </details>
+            <details class="faq-item reveal">
+              <summary>目前支持哪些 AI 供应商？</summary>
+              <div class="faq-answer">目前已接入 「硅基流动 (SiliconFlow)」。我们非常重视社区需求，后续将根据大家的使用反馈，持续接入更多主流 AI 平台。</div>
+            </details>
+            <details class="faq-item reveal">
+              <summary>更换电脑或浏览器后，简历会丢失吗？</summary>
+              <div class="faq-answer">数据仅保存在当前浏览器中。更换电脑或浏览器时，只需提前导出 JSON 格式备份，在新设备导入即可继续编辑。</div>
+            </details>
+            <details class="faq-item reveal">
+              <summary>支持哪些语言？</summary>
+              <div class="faq-answer">目前支持简体中文与英文双语切换。</div>
+            </details>
+            <details class="faq-item reveal">
+              <summary>导出的 PDF 能通过 ATS 简历筛选吗？</summary>
+              <div class="faq-answer">完美通过。我们采用浏览器原生引擎生成标准 PDF，确保所有文字均可被正常选中与复制。您的核心关键词能被各大企业的 ATS（招聘追踪系统）精准提取，告别乱码与识别遗漏。</div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-final">
+        <div class="container">
+          <h2 class="reveal">下一次跃迁，从这里开始</h2>
+          <p class="section-final-subtitle reveal delay-1">
+            用<span class="brand-font">优派简历</span>，打造一份真正"有派"的简历。
+          </p>
+          <div class="reveal delay-2">
+            <button onclick="startApp(event)" class="btn btn-primary" style="padding: 18px 40px; font-size: 20px;">
+              <span>立即开始</span>
+              <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container footer-grid">
+        <div>© 2026 优派简历 <span class="brand-font">OpResume</span></div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // 跳转到编辑器：写入路由标记后再进入 /editor，
+    // 这样下次访问时 head 处的早期脚本能读取并直接重定向，避免再走 landing。
+    function startApp(e) {
+      if (e) e.preventDefault();
+      try { localStorage.setItem('opresume:last-route', '/editor'); } catch {}
+      location.href = '/editor';
+    }
+
+    // 拉取 GitHub star 数：1 小时 localStorage 缓存，避开未授权 API 60 次/小时/IP 限制；
+    // 网络失败或限流时静默保留占位符 "—"，不影响其它功能。
+    (function loadGitHubStars() {
+      const el = document.getElementById('github-star-count');
+      if (!el) return;
+      const cacheKey = 'opresume:github-stars';
+      const ttl = 60 * 60 * 1000;
+      const fmt = (n) => new Intl.NumberFormat('en-US').format(n);   // 7408 → "7,408"
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (cached && Date.now() - cached.t < ttl) {
+          el.textContent = fmt(cached.n);
+          return;
+        }
+      } catch {}
+      fetch('https://api.github.com/repos/oopooa/opresume')
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (!data) return;
+          const n = data.stargazers_count ?? 0;
+          el.textContent = fmt(n);
+          try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), n })); } catch {}
+        })
+        .catch(() => { /* 离线/限流时保留占位符 */ });
+    })();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // 滚动揭示动画 (Scroll Reveal)
+      const revealElements = document.querySelectorAll('.reveal');
+      const revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, {
+        root: null,
+        threshold: 0.15,
+        rootMargin: "0px 0px -50px 0px"
+      });
+
+      revealElements.forEach(el => revealObserver.observe(el));
+
+      // 导航栏斑马线自适应切换
+      const nav = document.getElementById('global-nav');
+      const darkSections = document.querySelectorAll('.dark-section');
+      const navObserver = new IntersectionObserver((entries) => {
+        let isOverDark = false;
+        entries.forEach(entry => {
+          if (entry.isIntersecting) isOverDark = true;
+        });
+        if (isOverDark) nav.classList.add('is-dark');
+        else nav.classList.remove('is-dark');
+      }, {
+        rootMargin: "-55px 0px -100% 0px",
+        threshold: 0
+      });
+
+      darkSections.forEach(section => navObserver.observe(section));
+
+      // 顶部滚动进度条：用 rAF 节流，避免 scroll 高频触发布局抖动
+      const progressBar = document.getElementById('scroll-progress');
+      let progressTicking = false;
+      function updateProgress() {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const percent = max > 0 ? (window.scrollY / max) * 100 : 0;
+        progressBar.style.width = percent + '%';
+        progressTicking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!progressTicking) {
+          requestAnimationFrame(updateProgress);
+          progressTicking = true;
+        }
+      }, { passive: true });
+      updateProgress();
+
+      // Stats 数字 counter — 进入视口时按 ease-out quint 累加到目标值
+      const counters = document.querySelectorAll('.stat-num [data-target]');
+      const counterObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target;
+          const target = parseInt(el.dataset.target, 10);
+          // 目标为 0 时无需动画，直接停在 0
+          if (target === 0) {
+            counterObserver.unobserve(el);
+            return;
+          }
+          const duration = 1600;
+          const start = performance.now();
+          const animate = (now) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 5);
+            el.textContent = Math.round(target * eased);
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+          counterObserver.unobserve(el);
+        });
+      }, { threshold: 0.4 });
+      counters.forEach(el => counterObserver.observe(el));
+    });
+  </script>
+</body>
 </html>

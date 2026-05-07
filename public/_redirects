@@ -1,0 +1,5 @@
+# Cloudflare Pages / Netlify 静态托管的 URL 重写规则
+# 让 /editor 路径直接返回 editor.html 内容（状态码 200，URL 不变）。
+# 主页 / 由 index.html 自然命中，无需额外规则。
+/editor   /editor.html   200
+/editor/  /editor.html   200

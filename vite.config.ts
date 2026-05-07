@@ -188,8 +188,30 @@ const pkg = JSON.parse(
   readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'),
 );
 
+/**
+ * Dev 服务器路由重写：让 /editor 与 /editor/ 命中 editor.html。
+ * Vite 默认仅响应 /editor.html，部署侧（Cloudflare Pages 的 _redirects）
+ * 负责生产环境的同等重写，这里是开发环境的镜像。
+ */
+function editorRouteRewritePlugin(): Plugin {
+  return {
+    name: 'editor-route-rewrite',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        if (!req.url) return next();
+        // 仅匹配精确的 /editor 或 /editor/，避免误伤 /editor.html 与静态资源
+        const [pathname, search = ''] = req.url.split('?');
+        if (pathname === '/editor' || pathname === '/editor/') {
+          req.url = '/editor.html' + (search ? '?' + search : '');
+        }
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), resumeApiPlugin()],
+  plugins: [react(), resumeApiPlugin(), editorRouteRewritePlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
@@ -200,6 +222,12 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      // 多入口：landing（index.html，纯静态）与编辑器（editor.html，挂 React）。
+      // 让 landing 用户不必下载 React bundle，提升首屏与 SEO 表现。
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        editor: path.resolve(__dirname, 'editor.html'),
+      },
       output: {
         manualChunks: {
           'vendor-tiptap': [
