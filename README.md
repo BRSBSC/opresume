@@ -15,7 +15,7 @@
 
 **[👉 即刻开始](https://opresume.pages.dev)**
 
-<img src="docs/images/mockup1.png" alt="OpResume Preview" width="800" />
+<img src="docs/images/mockup.webp" alt="OpResume Preview" width="800" />
 
 </div>
 
