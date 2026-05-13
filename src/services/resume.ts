@@ -3,6 +3,7 @@ import { getSampleResume } from '@/config/sample-resume';
 import { detectBrowserLanguage, isDemoMode } from '@/i18n';
 
 const API_URL = '/api/resume';
+const STATIC_RESUME_URL = `${import.meta.env.BASE_URL}data/resume.json`;
 const LS_KEY = 'opresume-config';
 
 function isDev(): boolean {
@@ -78,7 +79,7 @@ export async function loadResume(lang?: string): Promise<JsonResume> {
     }
   }
 
-  const res = await fetch('/data/resume.json');
+  const res = await fetch(STATIC_RESUME_URL);
   if (!res.ok) {
     return addCustomFieldIds(getDefaultResume(lang));
   }

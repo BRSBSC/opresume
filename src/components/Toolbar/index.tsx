@@ -123,7 +123,7 @@ export function Toolbar() {
     } catch {
       /* localStorage 不可用时忽略，跳转仍能完成 */
     }
-    window.location.href = '/';
+    window.location.href = import.meta.env.BASE_URL;
   };
 
   return (

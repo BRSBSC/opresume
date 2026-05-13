@@ -164,7 +164,7 @@ function resumeApiPlugin(): Plugin {
         const src = path.join(DATA_DIR, `avatar${ext}`);
         if (existsSync(src)) {
           await fs.copyFile(src, path.resolve(outDir, `avatar${ext}`));
-          avatarStaticPath = `/data/avatar${ext}`;
+          avatarStaticPath = `${viteBase}data/avatar${ext}`;
         }
       }
 
@@ -180,6 +180,16 @@ function resumeApiPlugin(): Plugin {
         } catch { /* 解析失败则原样复制 */ }
       }
       await fs.writeFile(path.resolve(outDir, 'resume.json'), output);
+
+      const distDir = path.resolve(__dirname, 'dist');
+      await fs.writeFile(path.resolve(distDir, '.nojekyll'), '');
+
+      const editorHtml = path.resolve(distDir, 'editor.html');
+      if (existsSync(editorHtml)) {
+        const editorDir = path.resolve(distDir, 'editor');
+        await fs.mkdir(editorDir, { recursive: true });
+        await fs.copyFile(editorHtml, path.resolve(editorDir, 'index.html'));
+      }
     },
   };
 }
@@ -188,10 +198,19 @@ const pkg = JSON.parse(
   readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'),
 );
 
+function normalizeBasePath(basePath: string | undefined): string {
+  if (!basePath) return '/';
+  if (basePath === './') return './';
+  const withLeadingSlash = basePath.startsWith('/') ? basePath : `/${basePath}`;
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
+}
+
+const viteBase = normalizeBasePath(process.env.VITE_BASE_PATH);
+
 /**
  * Dev 服务器路由重写：让 /editor 与 /editor/ 命中 editor.html。
- * Vite 默认仅响应 /editor.html，部署侧（Cloudflare Pages 的 _redirects）
- * 负责生产环境的同等重写，这里是开发环境的镜像。
+ * Vite 默认仅响应 /editor.html，生产构建会额外生成 editor/index.html，
+ * 这里是开发环境的镜像。
  */
 function editorRouteRewritePlugin(): Plugin {
   return {
@@ -211,6 +230,7 @@ function editorRouteRewritePlugin(): Plugin {
 }
 
 export default defineConfig({
+  base: viteBase,
   plugins: [react(), resumeApiPlugin(), editorRouteRewritePlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),

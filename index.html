@@ -4,12 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script>
+    window.__opresumeBase = '%BASE_URL%';
+    window.__opresumePath = function(path) {
+      return window.__opresumeBase + String(path || '').replace(/^\/+/, '');
+    };
+
     // 路由记忆：上次会话停留在 /editor 时，直接重定向跳过 landing。
     // 必须放在 head 最早处，避免 landing 资源（字体/CSS/图）开始加载导致闪烁。
     // 使用 location.replace 让 / 不进入历史栈，浏览器返回键仍能回到上一站点。
     try {
       if (localStorage.getItem('opresume:last-route') === '/editor') {
-        location.replace('/editor');
+        location.replace(window.__opresumePath('editor/'));
       }
     } catch (_) { /* localStorage 不可用时忽略，正常显示 landing */ }
   </script>
@@ -21,7 +26,7 @@
   <meta property="og:title" content="优派简历 — 写简历，本应如此。" />
   <meta property="og:description" content="免登录的智能简历生成器。AI 润色、拖拽排版、隐私打码 — 您的简历，永远只在您手里。" />
   <meta property="og:url" content="https://opresume.pages.dev" />
-  <meta property="og:image" content="/favicon.svg" />
+  <meta property="og:image" content="%BASE_URL%favicon.svg" />
   <meta property="og:locale" content="zh_CN" />
   <meta property="og:site_name" content="优派简历" />
 
@@ -29,7 +34,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="优派简历 — 写简历，本应如此。" />
   <meta name="twitter:description" content="免登录的智能简历生成器。AI 润色、拖拽排版、隐私打码。" />
-  <meta name="twitter:image" content="/favicon.svg" />
+  <meta name="twitter:image" content="%BASE_URL%favicon.svg" />
 
   <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
@@ -78,7 +83,7 @@
   }
   </script>
 
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -93,7 +98,7 @@
        ============================================================ */
     @font-face {
       font-family: 'MiSans';
-      src: url('/fonts/MiSans-Bold.ttf') format('truetype');
+      src: url('%BASE_URL%fonts/MiSans-Bold.ttf') format('truetype');
       font-weight: 700;
       font-style: normal;
       font-display: swap;
@@ -721,7 +726,7 @@
 
   <div id="landing-wrapper">
     <nav class="nav" id="global-nav">
-      <a href="/" class="nav-brand">
+      <a href="%BASE_URL%" class="nav-brand">
         <svg class="nav-logo" xmlns="http://www.w3.org/2000/svg" viewBox="425.43 407.90 770.44 770.44" fill="currentColor" aria-hidden="true">
           <path d="M520.2 408.6c-14.9 4-24.5 14.9-29.1 33.1-9.9 38.6 2.2 97.2 31.3 152 12.2 23.1 22 37.9 41.8 63.4 16.5 21.3 31.9 38 65.4 71.4 32.8 32.7 39.2 40.1 44.3 50.8 7 14.7 9.9 35.2 8.1 57.3-1.7 21.8-7.9 69.7-18 139.9-5.5 38.2-12.7 90.8-14.1 103.6-1.6 13.8-.6 18 6.6 27.4 13.8 18.2 57.9 66.6 62.4 68.5 5.5 2.2 9.9.6 16.4-6.2 20.8-21.7 58.6-65.7 61.3-71.3 1.9-3.9 2.4-6.7 2.4-12.5 0-6.4-6.2-59.9-14-120-6.3-48.8-12.1-96.5-13.4-110-6.8-67.9 7-135.6 41.6-204.5 32.7-65.2 71.4-108.3 118.4-131.8 42.7-21.3 79.7-20.6 102.5 2.2 11.3 11.3 16.9 25.7 16.9 43.2 0 21.5-6.4 40.5-21.2 62.6-22.3 33.3-62.3 61.7-108.2 76.8-28.3 9.3-62 15.5-84.7 15.5-11.3 0-22.5 5.9-28.5 15-7.2 10.8-10.4 29.8-7 41.4 2.1 7.2 7.7 13.5 14.9 16.7 4.9 2.3 6.3 2.4 24.7 2.3 47.4-.2 105.9-15.3 156-40.3 44.2-22.1 76.4-49.5 101-86 15.4-23 26.2-50.8 31.6-81.6 2.7-15.5 2.5-44.7-.4-58.7-5.6-26.9-16-46.6-33.8-63.9-17.9-17.4-38.2-27.3-66.7-32.6-13.2-2.4-48-2.4-63.7.1-16.3 2.5-39.8 8.7-53.7 14.1-44.1 17.2-86.9 50.4-122.3 94.9-24.3 30.6-47 71.1-69.5 124.1-7.7 18.2-9.2 20.4-12.8 18.8-6.8-3.1-33-31.6-46.9-50.9-37.3-52-58.7-118.9-59.2-185.6-.1-21.1-.1-21.1-12.2-27.5-20.4-10.9-51.5-16.2-68.2-11.7" />
         </svg>
@@ -795,7 +800,7 @@
                 <!-- AI 改写演示 GIF：放在 public/gif/ 下，构建时复制到 dist 根，生产路径相同 -->
                 <img
                   class="mockup-media"
-                  src="/gif/ai-rewrite-diff.gif"
+                  src="%BASE_URL%gif/ai-rewrite-diff.gif"
                   alt="AI 划词润色与 Diff 对比演示"
                   loading="lazy"
                   decoding="async"
@@ -829,7 +834,7 @@
                 <!-- 模块拖拽排序演示 GIF -->
                 <img
                   class="mockup-media"
-                  src="/gif/list-drag.gif"
+                  src="%BASE_URL%gif/list-drag.gif"
                   alt="模块拖拽排序演示"
                   loading="lazy"
                   decoding="async"
@@ -861,7 +866,7 @@
                 <!-- 隐私打码模式演示 GIF -->
                 <img
                   class="mockup-media"
-                  src="/gif/privacy-mode.gif"
+                  src="%BASE_URL%gif/privacy-mode.gif"
                   alt="一键隐私打码模式演示"
                   loading="lazy"
                   decoding="async"
@@ -893,7 +898,7 @@
                 <!-- PDF 智能解析演示 GIF -->
                 <img
                   class="mockup-media"
-                  src="/gif/ai-pdf-import.gif"
+                  src="%BASE_URL%gif/ai-pdf-import.gif"
                   alt="PDF 简历智能解析与字段填充演示"
                   loading="lazy"
                   decoding="async"
@@ -1022,7 +1027,7 @@
     function startApp(e) {
       if (e) e.preventDefault();
       try { localStorage.setItem('opresume:last-route', '/editor'); } catch {}
-      location.href = '/editor';
+      location.href = window.__opresumePath('editor/');
     }
 
     // 拉取 GitHub star 数：1 小时 localStorage 缓存，避开未授权 API 60 次/小时/IP 限制；
